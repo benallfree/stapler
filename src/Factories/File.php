@@ -148,12 +148,13 @@ class File
           unlink($lockFile);
 
           return new StaplerFile($filePath);
-        } catch (\Exception $e)
-        {
+        } catch (\Exception $e) {
           @unlink($lockFile);
           @unlink($filePath);
           throw($e);
         }
+        
+        unlink($lockFile);
 
     }
 
