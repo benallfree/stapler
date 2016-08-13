@@ -121,27 +121,40 @@ class File
         $pathinfo = pathinfo($file);
         $name = $pathinfo['basename'];
         $extension = isset($pathinfo['extension']) ? '.'.$pathinfo['extension'] : '';
-        $filePath = tempnam(sys_get_temp_dir(), 'stapler-')."{$extension}";
         
-        $c = new \GuzzleHttp\Client();
-        $response = $c->request('GET', $url, [
-          'sink'=>$filePath,
-        ]);
-        
-        if($response->getStatusCode()!=200)
+        try
         {
-          throw new \Codesleeve\Stapler\Exceptions\FileException('Invalid URI returned HTTP code ', $response->getStatusCode());
+          $lockFile = tempnam(sys_get_temp_dir(), 'stapler-');
+          $filePath = $lockFile."{$extension}";
+        
+          $c = new \GuzzleHttp\Client();
+          $response = $c->request('GET', $url, [
+            'sink'=>$filePath,
+          ]);
+        
+          if($response->getStatusCode()!=200)
+          {
+            throw new \Codesleeve\Stapler\Exceptions\FileException('Invalid URI returned HTTP code ', $response->getStatusCode());
+          }
+
+          if (!$extension) {
+              $mimeType = MimeTypeGuesser::getInstance()->guess($filePath);
+              $extension = static::getMimeTypeExtensionGuesserInstance()->guess($mimeType);
+              $srcPath = $filePath;
+              $filePath = $filePath.'.'.$extension;
+              rename($srcPath, $filePath);
+          }
+        
+          unlink($lockFile);
+
+          return new StaplerFile($filePath);
+        } catch (\Exception $e)
+        {
+          @unlink($lockFile);
+          @unlink($filePath);
+          throw($e);
         }
 
-        if (!$extension) {
-            $mimeType = MimeTypeGuesser::getInstance()->guess($filePath);
-            $extension = static::getMimeTypeExtensionGuesserInstance()->guess($mimeType);
-            $srcPath = $filePath;
-            $filePath = $filePath.'.'.$extension;
-            rename($srcPath, $filePath);
-        }
-
-        return new StaplerFile($filePath);
     }
 
     /**
