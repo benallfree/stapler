@@ -125,7 +125,8 @@ class File
         try
         {
           $lockFile = tempnam(sys_get_temp_dir(), 'stapler-');
-          $filePath = $lockFile.".download.{$extension}";
+          $filePath = $lockFile.".download{$extension}";
+          \Log::debug($filePath);
         
           $c = new \GuzzleHttp\Client();
           $response = $c->request('GET', $url, [
@@ -136,14 +137,20 @@ class File
           {
             throw new \Codesleeve\Stapler\Exceptions\FileException('Invalid URI returned HTTP code ', $response->getStatusCode());
           }
-
-          if (!$extension) {
-              $mimeType = MimeTypeGuesser::getInstance()->guess($filePath);
-              $extension = static::getMimeTypeExtensionGuesserInstance()->guess($mimeType);
-              $srcPath = $filePath;
-              $filePath = $filePath.'.'.$extension;
-              rename($srcPath, $filePath);
+          
+          $mimeType = $response->getHeader('Content-Type');
+          if(!$mimeType)
+          {
+            $mimeType = MimeTypeGuesser::getInstance()->guess($filePath);
+          } else {
+            $mimeType = $mimeType[0];
           }
+          \Log::debug($mimeType);
+          $extension = static::getMimeTypeExtensionGuesserInstance()->guess($mimeType);
+          $srcPath = $filePath;
+          $filePath = $filePath.'.'.$extension;
+          \Log::debug($filePath);
+          rename($srcPath, $filePath);
         
           unlink($lockFile);
 
