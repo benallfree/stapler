@@ -125,7 +125,7 @@ class File
         try
         {
           $lockFile = tempnam(sys_get_temp_dir(), 'stapler-');
-          $filePath = $lockFile."{$extension}";
+          $filePath = $lockFile.".download.{$extension}";
         
           $c = new \GuzzleHttp\Client();
           $response = $c->request('GET', $url, [
@@ -153,9 +153,6 @@ class File
           @unlink($filePath);
           throw($e);
         }
-        
-        unlink($lockFile);
-
     }
 
     /**
